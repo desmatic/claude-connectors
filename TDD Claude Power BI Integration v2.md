@@ -87,353 +87,354 @@ To connect TrueFoundry’s AI Gateway on Amazon EKS to Amazon Bedrock over AWS P
 **AWS Bedrock Cross-Region Inference Note:** Claude models on Bedrock (such as Claude 3.5 Sonnet v2, Claude 3.7 Sonnet, and Claude 4.x profiles) use **Cross-Region Inference Profiles** (us.anthropic.\* or eu.anthropic.\*). When Bedrock routes an inference request across regions inside a geographic load-balancing group, both foundation-model/\* and guardrail/\* evaluations occur in the destination inference region—meaning the IAM policy **must** use \* for the region field on Foundation Models, Inference Profiles, and Guardrails. Furthermore, system-defined inference profiles must include both account-scoped and accountless (::) ARN patterns to ensure compatibility across all AWS SDK invocation paths.
 
 **IAM Permissions Policy (truefoundry-bedrock-invoke-policy.json):**
-
-`{`  
-  `"Version": "2012-10-17",`  
-  `"Statement": [`  
-    `{`  
-      `"Sid": "AllowClaudeFoundationModelsAndInferenceProfiles",`  
-      `"Effect": "Allow",`  
-      `"Action": [`  
-        `"bedrock:InvokeModel",`  
-        `"bedrock:InvokeModelWithResponseStream"`  
-      `],`  
-      `"Resource": [`  
-        `"arn:aws:bedrock:*::foundation-model/anthropic.claude-*",`  
-        `"arn:aws:bedrock:*::inference-profile/*.anthropic.claude-*",`  
-        `"arn:aws:bedrock:*:*:inference-profile/*.anthropic.claude-*",`  
-        `"arn:aws:bedrock:*:*:application-inference-profile/*"`  
-      `]`  
-    `},`  
-    `{`  
-      `"Sid": "AllowBedrockGuardrailsExecutionMultiRegion",`  
-      `"Effect": "Allow",`  
-      `"Action": [`  
-        `"bedrock:ApplyGuardrail"`  
-      `],`  
-      `"Resource": "arn:aws:bedrock:*:*:guardrail/*"`  
-    `},`  
-    `{`  
-      `"Sid": "AllowBedrockModelDiscoveryForTrueFoundryGateway",`  
-      `"Effect": "Allow",`  
-      `"Action": [`  
-        `"bedrock:ListFoundationModels",`  
-        `"bedrock:GetFoundationModel",`  
-        `"bedrock:ListInferenceProfiles",`  
-        `"bedrock:GetInferenceProfile"`  
-      `],`  
-      `"Resource": "*"`  
-    `}`  
-  `]`  
-`}`
+```
+{  
+  "Version": "2012-10-17",  
+  "Statement": [  
+    {  
+      "Sid": "AllowClaudeFoundationModelsAndInferenceProfiles",  
+      "Effect": "Allow",  
+      "Action": [  
+        "bedrock:InvokeModel",  
+        "bedrock:InvokeModelWithResponseStream"  
+      ],  
+      "Resource": [  
+        "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",  
+        "arn:aws:bedrock:*::inference-profile/*.anthropic.claude-*",  
+        "arn:aws:bedrock:*:*:inference-profile/*.anthropic.claude-*",  
+        "arn:aws:bedrock:*:*:application-inference-profile/*"  
+      ]  
+    },  
+    {  
+      "Sid": "AllowBedrockGuardrailsExecutionMultiRegion",  
+      "Effect": "Allow",  
+      "Action": [  
+        "bedrock:ApplyGuardrail"  
+      ],  
+      "Resource": "arn:aws:bedrock:*:*:guardrail/*"  
+    },  
+    {  
+      "Sid": "AllowBedrockModelDiscoveryForTrueFoundryGateway",  
+      "Effect": "Allow",  
+      "Action": [  
+        "bedrock:ListFoundationModels",  
+        "bedrock:GetFoundationModel",  
+        "bedrock:ListInferenceProfiles",  
+        "bedrock:GetInferenceProfile"  
+      ],  
+      "Resource": "*"  
+    }  
+  ]  
+}
 
 **IRSA Trust Policy (truefoundry-irsa-trust-policy.json):**
 
-`{`  
-  `"Version": "2012-10-17",`  
-  `"Statement": [`  
-    `{`  
-      `"Effect": "Allow",`  
-      `"Principal": {`  
-        `"Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>"`  
-      `},`  
-      `"Action": "sts:AssumeRoleWithWebIdentity",`  
-      `"Condition": {`  
-        `"StringEquals": {`  
-          `"oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:aud": "sts.amazonaws.com",`  
-          `"oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub": "system:serviceaccount:truefoundry:tfy-llm-gateway"`  
-        `}`  
-      `}`  
-    `}`  
-  `]`  
-`}`
+{  
+  "Version": "2012-10-17",  
+  "Statement": [  
+    {  
+      "Effect": "Allow",  
+      "Principal": {  
+        "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>"  
+      },  
+      "Action": "sts:AssumeRoleWithWebIdentity",  
+      "Condition": {  
+        "StringEquals": {  
+          "oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:aud": "sts.amazonaws.com",  
+          "oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub": "system:serviceaccount:truefoundry:tfy-llm-gateway"  
+        }  
+      }  
+    }  
+  ]  
+}
 
 ### **5.1 Terraform Blueprint Snippets**
 
 #### **variables.tf**
 
-`variable "aws_region" {`  
-  `description = "Primary AWS region where EKS and TrueFoundry are deployed"`  
-  `type        = string`  
-  `default     = "us-east-1"`  
-`}`
+variable "aws_region" {  
+  description = "Primary AWS region where EKS and TrueFoundry are deployed"  
+  type        = string  
+  default     = "us-east-1"  
+}
 
-`variable "vpc_id" {`  
-  `description = "VPC ID where the EKS cluster resides"`  
-  `type        = string`  
-`}`
+variable "vpc_id" {  
+  description = "VPC ID where the EKS cluster resides"  
+  type        = string  
+}
 
-`variable "private_subnet_ids" {`  
-  `description = "List of private subnet IDs for the Bedrock VPC Interface Endpoints"`  
-  `type        = list(string)`  
-`}`
+variable "private_subnet_ids" {  
+  description = "List of private subnet IDs for the Bedrock VPC Interface Endpoints"  
+  type        = list(string)  
+}
 
-`variable "eks_cluster_name" {`  
-  `description = "Name of the existing EKS cluster running TrueFoundry"`  
-  `type        = string`  
-`}`
+variable "eks_cluster_name" {  
+  description = "Name of the existing EKS cluster running TrueFoundry"  
+  type        = string  
+}
 
-`variable "tfy_namespace" {`  
-  `description = "Kubernetes namespace where TrueFoundry AI Gateway runs"`  
-  `type        = string`  
-  `default     = "truefoundry"`  
-`}`
+variable "tfy_namespace" {  
+  description = "Kubernetes namespace where TrueFoundry AI Gateway runs"  
+  type        = string  
+  default     = "truefoundry"  
+}
 
-`variable "tfy_service_account_name" {`  
-  `description = "Kubernetes ServiceAccount used by TrueFoundry LLM Gateway pods"`  
-  `type        = string`  
-  `default     = "tfy-llm-gateway"`  
-`}`
+variable "tfy_service_account_name" {  
+  description = "Kubernetes ServiceAccount used by TrueFoundry LLM Gateway pods"  
+  type        = string  
+  default     = "tfy-llm-gateway"  
+}
 
-`variable "guardrail_kms_key_arns" {`  
-  `description = "Optional list of Customer Managed KMS Key ARNs used to encrypt Bedrock Guardrails"`  
-  `type        = list(string)`  
-  `default     = []`  
-`}`
+variable "guardrail_kms_key_arns" {  
+  description = "Optional list of Customer Managed KMS Key ARNs used to encrypt Bedrock Guardrails"  
+  type        = list(string)  
+  default     = []  
+}
 
 #### **main.tf**
 
-`terraform {`  
-  `required_version = ">= 1.5.0"`  
-  `required_providers {`  
-    `aws = {`  
-      `source  = "hashicorp/aws"`  
-      `version = "~> 5.0"`  
-    `}`  
-  `}`  
-`}`
+terraform {  
+  required_version = ">= 1.5.0"  
+  required_providers {  
+    aws = {  
+      source  = "hashicorp/aws"  
+      version = "~> 5.0"  
+    }  
+  }  
+}
 
-`provider "aws" {`  
-  `region = var.aws_region`  
-`}`
+provider "aws" {  
+  region = var.aws_region  
+}
 
-`# ------------------------------------------------------------------------------`  
-`# 1. Data Sources (Account, VPC, EKS Cluster, & OIDC Provider)`  
-`# ------------------------------------------------------------------------------`  
-`data "aws_caller_identity" "current" {}`
+# ------------------------------------------------------------------------------  
+# 1. Data Sources (Account, VPC, EKS Cluster, & OIDC Provider)  
+# ------------------------------------------------------------------------------  
+data "aws_caller_identity" "current" {}
 
-`data "aws_vpc" "eks_vpc" {`  
-  `id = var.vpc_id`  
-`}`
+data "aws_vpc" "eks_vpc" {  
+  id = var.vpc_id  
+}
 
-`data "aws_eks_cluster" "this" {`  
-  `name = var.eks_cluster_name`  
-`}`
+data "aws_eks_cluster" "this" {  
+  name = var.eks_cluster_name  
+}
 
-`locals {`  
-  `oidc_issuer_url   = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")`  
-  `oidc_provider_arn = "arn:aws:iam::$data.aw{s}_{c}alle{r}_{i}dentity.current.accoun{t}_{i}d:oidc-provider/${local.oidc_issuer_url}"`  
-`}`
+locals {  
+  oidc_issuer_url   = replace(data.aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")  
+  oidc_provider_arn = "arn:aws:iam::$data.aw{s}_{c}alle{r}_{i}dentity.current.accoun{t}_{i}d:oidc-provider/${local.oidc_issuer_url}"  
+}
 
-`# ------------------------------------------------------------------------------`  
-`# 2. Security Group for Bedrock PrivateLink Endpoints`  
-`# ------------------------------------------------------------------------------`  
-`resource "aws_security_group" "bedrock_vpce_sg" {`  
-  `name        = "${var.eks_cluster_name}-bedrock-vpce-sg"`  
-  `description = "Allow TLS 443 inbound from EKS VPC to Bedrock PrivateLink Endpoints"`  
-  `vpc_id      = var.vpc_id`
+# ------------------------------------------------------------------------------  
+# 2. Security Group for Bedrock PrivateLink Endpoints  
+# ------------------------------------------------------------------------------  
+resource "aws_security_group" "bedrock_vpce_sg" {  
+  name        = "${var.eks_cluster_name}-bedrock-vpce-sg"  
+  description = "Allow TLS 443 inbound from EKS VPC to Bedrock PrivateLink Endpoints"  
+  vpc_id      = var.vpc_id
 
-  `ingress {`  
-    `description = "HTTPS from EKS VPC CIDR"`  
-    `from_port   = 443`  
-    `to_port     = 443`  
-    `protocol    = "tcp"`  
-    `cidr_blocks = [data.aws_vpc.eks_vpc.cidr_block]`  
-  `}`
+  ingress {  
+    description = "HTTPS from EKS VPC CIDR"  
+    from_port   = 443  
+    to_port     = 443  
+    protocol    = "tcp"  
+    cidr_blocks = [data.aws_vpc.eks_vpc.cidr_block]  
+  }
 
-  `egress {`  
-    `description = "Allow all outbound"`  
-    `from_port   = 0`  
-    `to_port     = 0`  
-    `protocol    = "-1"`  
-    `cidr_blocks = ["0.0.0.0/0"]`  
-  `}`
+  egress {  
+    description = "Allow all outbound"  
+    from_port   = 0  
+    to_port     = 0  
+    protocol    = "-1"  
+    cidr_blocks = ["0.0.0.0/0"]  
+  }
 
-  `tags = {`  
-    `Name = "${var.eks_cluster_name}-bedrock-vpce-sg"`  
-  `}`  
-`}`
+  tags = {  
+    Name = "${var.eks_cluster_name}-bedrock-vpce-sg"  
+  }  
+}
 
-`# ------------------------------------------------------------------------------`  
-`# 3. IAM Role & Policy for TrueFoundry Gateway (IRSA)`  
-`# ------------------------------------------------------------------------------`  
-`data "aws_iam_policy_document" "tfy_irsa_assume_role" {`  
-  `statement {`  
-    `effect  = "Allow"`  
-    `actions = ["sts:AssumeRoleWithWebIdentity"]`
+# ------------------------------------------------------------------------------  
+# 3. IAM Role & Policy for TrueFoundry Gateway (IRSA)  
+# ------------------------------------------------------------------------------  
+data "aws_iam_policy_document" "tfy_irsa_assume_role" {  
+  statement {  
+    effect  = "Allow"  
+    actions = ["sts:AssumeRoleWithWebIdentity"]
 
-    `principals {`  
-      `type        = "Federated"`  
-      `identifiers = [local.oidc_provider_arn]`  
-    `}`
+    principals {  
+      type        = "Federated"  
+      identifiers = [local.oidc_provider_arn]  
+    }
 
-    `condition {`  
-      `test     = "StringEquals"`  
-      `variable = "${local.oidc_issuer_url}:aud"`  
-      `values   = ["sts.amazonaws.com"]`  
-    `}`
+    condition {  
+      test     = "StringEquals"  
+      variable = "${local.oidc_issuer_url}:aud"  
+      values   = ["sts.amazonaws.com"]  
+    }
 
-    `condition {`  
-      `test     = "StringEquals"`  
-      `variable = "${local.oidc_issuer_url}:sub"`  
-      `values   = ["system:serviceaccount:$var.tf{y}_{n}amespace:${var.tfy_service_account_name}"]`  
-    `}`  
-  `}`  
-`}`
+    condition {  
+      test     = "StringEquals"  
+      variable = "${local.oidc_issuer_url}:sub"  
+      values   = ["system:serviceaccount:$var.tf{y}_{n}amespace:${var.tfy_service_account_name}"]  
+    }  
+  }  
+}
 
-`resource "aws_iam_role" "tfy_bedrock_irsa_role" {`  
-  `name               = "${var.eks_cluster_name}-tfy-bedrock-irsa"`  
-  `assume_role_policy = data.aws_iam_policy_document.tfy_irsa_assume_role.json`
+resource "aws_iam_role" "tfy_bedrock_irsa_role" {  
+  name               = "${var.eks_cluster_name}-tfy-bedrock-irsa"  
+  assume_role_policy = data.aws_iam_policy_document.tfy_irsa_assume_role.json
 
-  `tags = {`  
-    `Component = "TrueFoundry-LLM-Gateway"`  
-  `}`  
-`}`
+  tags = {  
+    Component = "TrueFoundry-LLM-Gateway"  
+  }  
+}
 
-`data "aws_iam_policy_document" "tfy_bedrock_permissions" {`  
-  `statement {`  
-    `sid    = "AllowClaudeModelAndProfileInvocation"`  
-    `effect = "Allow"`  
-    `actions = [`  
-      `"bedrock:InvokeModel",`  
-      `"bedrock:InvokeModelWithResponseStream"`  
-    `]`  
-    `resources = [`  
-      `"arn:aws:bedrock:*::foundation-model/anthropic.claude-*",`  
-      `"arn:aws:bedrock:*::inference-profile/*.anthropic.claude-*",`  
-      `"arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*.anthropic.claude-*",`  
-      `"arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:application-inference-profile/*"`  
-    `]`  
-  `}`
+data "aws_iam_policy_document" "tfy_bedrock_permissions" {  
+  statement {  
+    sid    = "AllowClaudeModelAndProfileInvocation"  
+    effect = "Allow"  
+    actions = [  
+      "bedrock:InvokeModel",  
+      "bedrock:InvokeModelWithResponseStream"  
+    ]  
+    resources = [  
+      "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",  
+      "arn:aws:bedrock:*::inference-profile/*.anthropic.claude-*",  
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*.anthropic.claude-*",  
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:application-inference-profile/*"  
+    ]  
+  }
 
-  `statement {`  
-    `sid    = "AllowBedrockGuardrailsMultiRegion"`  
-    `effect = "Allow"`  
-    `actions = [`  
-      `"bedrock:ApplyGuardrail"`  
-    `]`  
-    `# Wildcard region (*) required so Cross-Region Inference Profiles can evaluate guardrails in peer regions`  
-    `resources = [`  
-      `"arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:guardrail/*"`  
-    `]`  
-  `}`
+  statement {  
+    sid    = "AllowBedrockGuardrailsMultiRegion"  
+    effect = "Allow"  
+    actions = [  
+      "bedrock:ApplyGuardrail"  
+    ]  
+    # Wildcard region (*) required so Cross-Region Inference Profiles can evaluate guardrails in peer regions  
+    resources = [  
+      "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:guardrail/*"  
+    ]  
+  }
 
-  `dynamic "statement" {`  
-    `for_each = length(var.guardrail_kms_key_arns) > 0 ? [1] : []`  
-    `content {`  
-      `sid    = "AllowKMSForCustomerManagedGuardrails"`  
-      `effect = "Allow"`  
-      `actions = [`  
-        `"kms:Decrypt",`  
-        `"kms:GenerateDataKey"`  
-      `]`  
-      `resources = var.guardrail_kms_key_arns`  
-    `}`  
-  `}`
+  dynamic "statement" {  
+    for_each = length(var.guardrail_kms_key_arns) > 0 ? [1] : []  
+    content {  
+      sid    = "AllowKMSForCustomerManagedGuardrails"  
+      effect = "Allow"  
+      actions = [  
+        "kms:Decrypt",  
+        "kms:GenerateDataKey"  
+      ]  
+      resources = var.guardrail_kms_key_arns  
+    }  
+  }
 
-  `statement {`  
-    `sid    = "AllowBedrockModelDiscovery"`  
-    `effect = "Allow"`  
-    `actions = [`  
-      `"bedrock:ListFoundationModels",`  
-      `"bedrock:GetFoundationModel",`  
-      `"bedrock:ListInferenceProfiles",`  
-      `"bedrock:GetInferenceProfile"`  
-    `]`  
-    `resources = ["*"]`  
-  `}`  
-`}`
+  statement {  
+    sid    = "AllowBedrockModelDiscovery"  
+    effect = "Allow"  
+    actions = [  
+      "bedrock:ListFoundationModels",  
+      "bedrock:GetFoundationModel",  
+      "bedrock:ListInferenceProfiles",  
+      "bedrock:GetInferenceProfile"  
+    ]  
+    resources = ["*"]  
+  }  
+}
 
-`resource "aws_iam_policy" "tfy_bedrock_policy" {`  
-  `name        = "${var.eks_cluster_name}-tfy-bedrock-policy"`  
-  `description = "Least-privilege Bedrock policy for TrueFoundry AI Gateway"`  
-  `policy      = data.aws_iam_policy_document.tfy_bedrock_permissions.json`  
-`}`
+resource "aws_iam_policy" "tfy_bedrock_policy" {  
+  name        = "${var.eks_cluster_name}-tfy-bedrock-policy"  
+  description = "Least-privilege Bedrock policy for TrueFoundry AI Gateway"  
+  policy      = data.aws_iam_policy_document.tfy_bedrock_permissions.json  
+}
 
-`resource "aws_iam_role_policy_attachment" "tfy_bedrock_attach" {`  
-  `role       = aws_iam_role.tfy_bedrock_irsa_role.name`  
-  `policy_arn = aws_iam_policy.tfy_bedrock_policy.arn`  
-`}`
+resource "aws_iam_role_policy_attachment" "tfy_bedrock_attach" {  
+  role       = aws_iam_role.tfy_bedrock_irsa_role.name  
+  policy_arn = aws_iam_policy.tfy_bedrock_policy.arn  
+}
 
-`# ------------------------------------------------------------------------------`  
-`# 4. AWS PrivateLink Interface Endpoints (bedrock-runtime & bedrock)`  
-`# ------------------------------------------------------------------------------`  
-`data "aws_iam_policy_document" "bedrock_vpce_policy" {`  
-  `statement {`  
-    `sid    = "RestrictToCurrentAWSAccount"`  
-    `effect = "Allow"`  
-    `actions = [`  
-      `"bedrock:InvokeModel",`  
-      `"bedrock:InvokeModelWithResponseStream",`  
-      `"bedrock:ApplyGuardrail",`  
-      `"bedrock:ListFoundationModels",`  
-      `"bedrock:GetFoundationModel",`  
-      `"bedrock:ListInferenceProfiles",`  
-      `"bedrock:GetInferenceProfile"`  
-    `]`  
-    `resources = ["*"]`
+# ------------------------------------------------------------------------------  
+# 4. AWS PrivateLink Interface Endpoints (bedrock-runtime & bedrock)  
+# ------------------------------------------------------------------------------  
+data "aws_iam_policy_document" "bedrock_vpce_policy" {  
+  statement {  
+    sid    = "RestrictToCurrentAWSAccount"  
+    effect = "Allow"  
+    actions = [  
+      "bedrock:InvokeModel",  
+      "bedrock:InvokeModelWithResponseStream",  
+      "bedrock:ApplyGuardrail",  
+      "bedrock:ListFoundationModels",  
+      "bedrock:GetFoundationModel",  
+      "bedrock:ListInferenceProfiles",  
+      "bedrock:GetInferenceProfile"  
+    ]  
+    resources = ["*"]
 
-    `principals {`  
-      `type        = "AWS"`  
-      `identifiers = ["*"]`  
-    `}`
+    principals {  
+      type        = "AWS"  
+      identifiers = ["*"]  
+    }
 
-    `condition {`  
-      `test     = "StringEquals"`  
-      `variable = "aws:PrincipalAccount"`  
-      `values   = [data.aws_caller_identity.current.account_id]`  
-    `}`  
-  `}`  
-`}`
+    condition {  
+      test     = "StringEquals"  
+      variable = "aws:PrincipalAccount"  
+      values   = [data.aws_caller_identity.current.account_id]  
+    }  
+  }  
+}
 
-`resource "aws_vpc_endpoint" "bedrock_runtime" {`  
-  `vpc_id              = var.vpc_id`  
-  `service_name        = "com.amazonaws.${var.aws_region}.bedrock-runtime"`  
-  `vpc_endpoint_type   = "Interface"`  
-  `subnet_ids          = var.private_subnet_ids`  
-  `security_group_ids  = [aws_security_group.bedrock_vpce_sg.id]`  
-  `private_dns_enabled = true`  
-  `policy              = data.aws_iam_policy_document.bedrock_vpce_policy.json`
+resource "aws_vpc_endpoint" "bedrock_runtime" {  
+  vpc_id              = var.vpc_id  
+  service_name        = "com.amazonaws.${var.aws_region}.bedrock-runtime"  
+  vpc_endpoint_type   = "Interface"  
+  subnet_ids          = var.private_subnet_ids  
+  security_group_ids  = [aws_security_group.bedrock_vpce_sg.id]  
+  private_dns_enabled = true  
+  policy              = data.aws_iam_policy_document.bedrock_vpce_policy.json
 
-  `tags = {`  
-    `Name = "${var.eks_cluster_name}-bedrock-runtime-vpce"`  
-  `}`  
-`}`
+  tags = {  
+    Name = "${var.eks_cluster_name}-bedrock-runtime-vpce"  
+  }  
+}
 
-`resource "aws_vpc_endpoint" "bedrock_control_plane" {`  
-  `vpc_id              = var.vpc_id`  
-  `service_name        = "com.amazonaws.${var.aws_region}.bedrock"`  
-  `vpc_endpoint_type   = "Interface"`  
-  `subnet_ids          = var.private_subnet_ids`  
-  `security_group_ids  = [aws_security_group.bedrock_vpce_sg.id]`  
-  `private_dns_enabled = true`  
-  `policy              = data.aws_iam_policy_document.bedrock_vpce_policy.json`
+resource "aws_vpc_endpoint" "bedrock_control_plane" {  
+  vpc_id              = var.vpc_id  
+  service_name        = "com.amazonaws.${var.aws_region}.bedrock"  
+  vpc_endpoint_type   = "Interface"  
+  subnet_ids          = var.private_subnet_ids  
+  security_group_ids  = [aws_security_group.bedrock_vpce_sg.id]  
+  private_dns_enabled = true  
+  policy              = data.aws_iam_policy_document.bedrock_vpce_policy.json
 
-  `tags = {`  
-    `Name = "${var.eks_cluster_name}-bedrock-control-vpce"`  
-  `}`  
-`}`
+  tags = {  
+    Name = "${var.eks_cluster_name}-bedrock-control-vpce"  
+  }  
+}
 
-`# ------------------------------------------------------------------------------`  
-`# 5. Outputs`  
-`# ------------------------------------------------------------------------------`  
-`output "truefoundry_bedrock_irsa_role_arn" {`  
-  `description = "Annotate the TrueFoundry Gateway K8s ServiceAccount with this IAM Role ARN"`  
-  `value       = aws_iam_role.tfy_bedrock_irsa_role.arn`  
-`}`
+# ------------------------------------------------------------------------------  
+# 5. Outputs  
+# ------------------------------------------------------------------------------  
+output "truefoundry_bedrock_irsa_role_arn" {  
+  description = "Annotate the TrueFoundry Gateway K8s ServiceAccount with this IAM Role ARN"  
+  value       = aws_iam_role.tfy_bedrock_irsa_role.arn  
+}
 
-`output "bedrock_runtime_vpce_id" {`  
-  `description = "VPC Endpoint ID for Bedrock Runtime"`  
-  `value       = aws_vpc_endpoint.bedrock_runtime.id`  
-`}`
+output "bedrock_runtime_vpce_id" {  
+  description = "VPC Endpoint ID for Bedrock Runtime"  
+  value       = aws_vpc_endpoint.bedrock_runtime.id  
+}
+```
 
 ### **5.2 IRSA Role Binding & TrueFoundry Configuration**
 
 > 1. **Annotate the TrueFoundry Service Account:** Attach the truefoundry\_bedrock\_irsa\_role\_arn output to the Gateway Service Account:  
->    `kubectl annotate serviceaccount tfy-llm-gateway \`  
->      `-n truefoundry \`  
->      `eks.amazonaws.com/role-arn=arn:aws:iam::<AWS_ACCOUNT_ID>:role/<CLUSTER_NAME>-tfy-bedrock-irsa \`  
->      `--overwrite`
+>    kubectl annotate serviceaccount tfy-llm-gateway \  
+>      -n truefoundry \  
+>      eks.amazonaws.com/role-arn=arn:aws:iam::<AWS_ACCOUNT_ID>:role/<CLUSTER_NAME>-tfy-bedrock-irsa \  
+>      --overwrite
 
 >    Restart the TrueFoundry AI Gateway pods so the EKS Pod Identity Webhook injects AWS\_ROLE\_ARN and AWS\_WEB\_IDENTITY\_TOKEN\_FILE.  
 > 2. **Configure Provider Integration in TrueFoundry UI:**  
@@ -441,11 +442,11 @@ To connect TrueFoundry’s AI Gateway on Amazon EKS to Amazon Bedrock over AWS P
    * For **Authentication Method**, choose **IAM Role / Assumed Service Account (IRSA)**.  
    * Add your target Claude Cross-Region Inference Profile IDs (e.g., us.anthropic.claude-3-7-sonnet-20250219-v1:0).  
 > 3. **Verify PrivateLink Resolution & STS Identity from Inside the Pod:**  
->    `# 1. Verify DNS resolves to private VPC CIDR IPs (e.g., 10.x.x.x)`  
->    `nslookup bedrock-runtime.us-east-1.amazonaws.com`
+>    # 1. Verify DNS resolves to private VPC CIDR IPs (e.g., 10.x.x.x)  
+>    nslookup bedrock-runtime.us-east-1.amazonaws.com
 
->    `# 2. Verify the pod assumed the IRSA role via WebIdentity`  
->    `aws sts get-caller-identity`
+>    # 2. Verify the pod assumed the IRSA role via WebIdentity  
+>    aws sts get-caller-identity
 
 ## **6\. Authentication Architecture: Microsoft Entra ID Two-App OBO Flow**
 
@@ -464,9 +465,9 @@ To adhere to OAuth 2.0 security best practices and avoid exposing confidential c
    * Click **Register** and copy the **Application (client) ID** (\<TFY\_GATEWAY\_APP\_ID\>) and **Directory (tenant) ID** (\<TENANT\_ID\>).  
 > 2. **Enable v2.0 Access Tokens in the App Manifest (Critical):**  
    * Click **Manifest** (under Manage) and set requestedAccessTokenVersion to 2 inside the api object (or "accessTokenAcceptedVersion": 2 if using the legacy Azure AD Graph app manifest format):  
-     `"api": {`  
-       `"requestedAccessTokenVersion": 2`  
-     `}`
+     "api": {  
+       "requestedAccessTokenVersion": 2  
+     }
 
    * Click **Save**.  
 > 3. **Expose the Inbound API Scope:**  
@@ -504,15 +505,16 @@ To adhere to OAuth 2.0 security best practices and avoid exposing confidential c
 ### **6.3 Step 3: Inbound Identity Provider Registration in TrueFoundry**
 
 In the TrueFoundry UI, navigate to **Settings \-\> Security & Access \-\> Identity Providers** and apply the configuration to validate tokens issued for App 1:
-
-`name: entra-obo-inbound`  
-`type: jwt`  
-`issuer: https://login.microsoftonline.com/<TENANT_ID>/v2.0`  
-`jwks_uri: https://login.microsoftonline.com/<TENANT_ID>/discovery/v2.0/keys`  
-`audiences:`  
-  `- <TFY_GATEWAY_APP_ID>`  
-  `- api://<TFY_GATEWAY_APP_ID>`  
-`subject_claim: preferred_username`
+```
+name: entra-obo-inbound  
+type: jwt  
+issuer: https://login.microsoftonline.com/<TENANT_ID>/v2.0  
+jwks_uri: https://login.microsoftonline.com/<TENANT_ID>/discovery/v2.0/keys  
+audiences:  
+  - <TFY_GATEWAY_APP_ID>  
+  - api://<TFY_GATEWAY_APP_ID>  
+subject_claim: preferred_username
+```
 
 Map resolved identities or Entra group claims to a TrueFoundry **Team** or **Virtual Account**.
 
@@ -520,20 +522,24 @@ Map resolved identities or Entra group claims to a TrueFoundry **Team** or **Vir
 
 Verify the end-to-end OBO exchange from your terminal using the Azure CLI before rolling out client configurations:
 
-`# 1. Request an inbound user token scoped to the TrueFoundry Gateway App`  
-`INBOUND_TOKEN=$(az account get-access-token \`  
-  `--scope "api://<TFY_GATEWAY_APP_ID>/access_as_user" \`  
-  `--query accessToken -o tsv)`
+# 1. Request an inbound user token scoped to the TrueFoundry Gateway App  
+```
+INBOUND_TOKEN=$(az account get-access-token \  
+  --scope "api://<TFY_GATEWAY_APP_ID>/access_as_user" \  
+  --query accessToken -o tsv)
+```
 
-`# 2. Call the TrueFoundry MCP Gateway tools/list endpoint over your private network`  
-`curl -X POST "https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted" \`  
-  `-H "Authorization: Bearer $INBOUND_TOKEN" \`  
-  `-H "Content-Type: application/json" \`  
-  `-d '{`  
-    `"jsonrpc": "2.0",`  
-    `"id": 1,`  
-    `"method": "tools/list"`  
-  `}'`
+# 2. Call the TrueFoundry MCP Gateway tools/list endpoint over your private network  
+```
+curl -X POST "https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted" \  
+  -H "Authorization: Bearer $INBOUND_TOKEN" \  
+  -H "Content-Type: application/json" \  
+  -d '{  
+    "jsonrpc": "2.0",  
+    "id": 1,  
+    "method": "tools/list"  
+  }'
+```
 
 ## **7\. Client Configuration: 100% Bedrock-Routed Clients**
 
@@ -551,120 +557,127 @@ Because Entra ID access tokens expire after 60–90 minutes, setting a static AN
 > 2. **Default MCP proxy mode:** Runs the FastMCP streamable HTTP proxy using async\_auth\_flow reading from the exact same encrypted OS keychain cache, preventing headless stdio startup timeouts.
 
 **tfy\_entra\_mcp\_bridge.py:**
+```
+import asyncio  
+import sys  
+import httpx  
+from azure.identity import InteractiveBrowserCredential, TokenCachePersistenceOptions  
+from fastmcp import FastMCP  
+from fastmcp.client import Client  
+from fastmcp.client.transports import StreamableHttpTransport
 
-`import asyncio`  
-`import sys`  
-`import httpx`  
-`from azure.identity import InteractiveBrowserCredential, TokenCachePersistenceOptions`  
-`from fastmcp import FastMCP`  
-`from fastmcp.client import Client`  
-`from fastmcp.client.transports import StreamableHttpTransport`
+TENANT_ID = "<TENANT_ID>"  
+PUBLIC_CLIENT_ID = "<PUBLIC_CLIENT_APP_ID>"  
+GATEWAY_APP_ID = "<TFY_GATEWAY_APP_ID>"  
+SCOPE = f"api://{GATEWAY_APP_ID}/access_as_user"  
+TFY_MCP_URL = "https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted"
 
-`TENANT_ID = "<TENANT_ID>"`  
-`PUBLIC_CLIENT_ID = "<PUBLIC_CLIENT_APP_ID>"`  
-`GATEWAY_APP_ID = "<TFY_GATEWAY_APP_ID>"`  
-`SCOPE = f"api://{GATEWAY_APP_ID}/access_as_user"`  
-`TFY_MCP_URL = "https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted"`
+# Persist MSAL token cache in encrypted OS keychain (DPAPI on Windows / Keychain on macOS)  
+cache_options = TokenCachePersistenceOptions(  
+    enabled=True,  
+    name="tfy_powerbi_mcp_token_cache",  
+    allow_unencrypted_storage=False  
+)
 
-`# Persist MSAL token cache in encrypted OS keychain (DPAPI on Windows / Keychain on macOS)`  
-`cache_options = TokenCachePersistenceOptions(`  
-    `enabled=True,`  
-    `name="tfy_powerbi_mcp_token_cache",`  
-    `allow_unencrypted_storage=False`  
-`)`
+def build_credential():  
+    # Prefer OS-native SSO broker (WAM on Windows) if azure-identity-broker is installed  
+    try:  
+        from azure.identity.broker import InteractiveBrowserBrokerCredential  
+        return InteractiveBrowserBrokerCredential(  
+            tenant_id=TENANT_ID,  
+            client_id=PUBLIC_CLIENT_ID,  
+            cache_persistence_options=cache_options,  
+            use_default_broker_account=True  
+        )  
+    except ImportError:  
+        return InteractiveBrowserCredential(  
+            tenant_id=TENANT_ID,  
+            client_id=PUBLIC_CLIENT_ID,  
+            cache_persistence_options=cache_options  
+        )
 
-`def build_credential():`  
-    `# Prefer OS-native SSO broker (WAM on Windows) if azure-identity-broker is installed`  
-    `try:`  
-        `from azure.identity.broker import InteractiveBrowserBrokerCredential`  
-        `return InteractiveBrowserBrokerCredential(`  
-            `tenant_id=TENANT_ID,`  
-            `client_id=PUBLIC_CLIENT_ID,`  
-            `cache_persistence_options=cache_options,`  
-            `use_default_broker_account=True`  
-        `)`  
-    `except ImportError:`  
-        `return InteractiveBrowserCredential(`  
-            `tenant_id=TENANT_ID,`  
-            `client_id=PUBLIC_CLIENT_ID,`  
-            `cache_persistence_options=cache_options`  
-        `)`
+credential = build_credential()
 
-`credential = build_credential()`
+class AsyncEntraBearerAuth(httpx.Auth):  
+    async def async_auth_flow(self, request: httpx.Request):  
+        # Run synchronous MSAL token acquisition/cache lookup in a worker thread to avoid blocking asyncio  
+        token_obj = await asyncio.to_thread(credential.get_token, SCOPE)  
+        request.headers["Authorization"] = f"Bearer {token_obj.token}"  
+        yield request
 
-`class AsyncEntraBearerAuth(httpx.Auth):`  
-    `async def async_auth_flow(self, request: httpx.Request):`  
-        `# Run synchronous MSAL token acquisition/cache lookup in a worker thread to avoid blocking asyncio`  
-        `token_obj = await asyncio.to_thread(credential.get_token, SCOPE)`  
-        `request.headers["Authorization"] = f"Bearer {token_obj.token}"`  
-        `yield request`
+def main():  
+    # Mode 1: Dynamic token helper for Claude Code apiKeyHelper & pre-warming auth  
+    if "--print-token" in sys.argv:  
+        token_obj = credential.get_token(SCOPE)  
+        sys.stdout.write(token_obj.token)  
+        sys.stdout.flush()  
+        return
 
-`def main():`  
-    `# Mode 1: Dynamic token helper for Claude Code apiKeyHelper & pre-warming auth`  
-    `if "--print-token" in sys.argv:`  
-        `token_obj = credential.get_token(SCOPE)`  
-        `sys.stdout.write(token_obj.token)`  
-        `sys.stdout.flush()`  
-        `return`
+    # Mode 2: Non-blocking MCP stdio-to-StreamableHTTP proxy  
+    transport = StreamableHttpTransport(url=TFY_MCP_URL, auth=AsyncEntraBearerAuth())  
+    proxy_client = Client(transport)  
+    mcp_proxy = FastMCP.as_proxy(proxy_client, name="PowerBI-TrueFoundry-Gateway")  
+    mcp_proxy.run(transport="stdio")
 
-    `# Mode 2: Non-blocking MCP stdio-to-StreamableHTTP proxy`  
-    `transport = StreamableHttpTransport(url=TFY_MCP_URL, auth=AsyncEntraBearerAuth())`  
-    `proxy_client = Client(transport)`  
-    `mcp_proxy = FastMCP.as_proxy(proxy_client, name="PowerBI-TrueFoundry-Gateway")`  
-    `mcp_proxy.run(transport="stdio")`
-
-`if __name__ == "__main__":`  
-    `main()`
+if __name__ == "__main__":  
+    main()
+```
 
 #### **Step B: Route All LLM Inference to AWS Bedrock via \~/.claude/settings.json**
 
 Instead of hardcoding a static ANTHROPIC\_AUTH\_TOKEN in the shell, configure \~/.claude/settings.json with apiKeyHelper so Claude Code dynamically acquires and refreshes the user's Entra JWT before invoking TrueFoundry's LLM Gateway:
 
-`{`  
-  `"apiKeyHelper": "uv run --with fastmcp --with azure-identity --with azure-identity-broker --with msal-extensions --with httpx C:\\ProgramData\\CompanyAI\\tfy_entra_mcp_bridge.py --print-token",`  
-  `"env": {`  
-    `"ANTHROPIC_BASE_URL": "https://ai-gateway.internal.yourcompany.com/anthropic",`  
-    `"ANTHROPIC_MODEL": "bedrock-claude-3-7-sonnet"`  
-  `}`  
-`}`
+```
+{  
+  "apiKeyHelper": "uv run --with fastmcp --with azure-identity --with azure-identity-broker --with msal-extensions --with httpx C:\\ProgramData\\CompanyAI\\tfy_entra_mcp_bridge.py --print-token",  
+  "env": {  
+    "ANTHROPIC_BASE_URL": "https://ai-gateway.internal.yourcompany.com/anthropic",  
+    "ANTHROPIC_MODEL": "bedrock-claude-3-7-sonnet"  
+  }  
+}
+```
 
 #### **Step C: Register the MCP Server in .claude.json (Claude Code MCP Configuration)**
 
-`{`  
-  `"mcpServers": {`  
-    `"powerbi-truefoundry": {`  
-      `"command": "uv",`  
-      `"args": [`  
-        `"run",`  
-        `"--with", "fastmcp",`  
-        `"--with", "azure-identity",`  
-        `"--with", "azure-identity-broker",`  
-        `"--with", "msal-extensions",`  
-        `"--with", "httpx",`  
-        `"C:\\ProgramData\\CompanyAI\\tfy_entra_mcp_bridge.py"`  
-      `]`  
-    `}`  
-  `}`  
-`}`
+```
+{  
+  "mcpServers": {  
+    "powerbi-truefoundry": {  
+      "command": "uv",  
+      "args": [  
+        "run",  
+        "--with", "fastmcp",  
+        "--with", "azure-identity",  
+        "--with", "azure-identity-broker",  
+        "--with", "msal-extensions",  
+        "--with", "httpx",  
+        "C:\\ProgramData\\CompanyAI\\tfy_entra_mcp_bridge.py"  
+      ]  
+    }  
+  }  
+}
+```
 
 #### **Step D: Alternative Zero-Code Setup Using mcp-remote (Public Client PKCE)**
 
 If you prefer using npx mcp-remote instead of the Python MSAL script for MCP transport, pass the **Public Client ID** (\<PUBLIC\_CLIENT\_APP\_ID\>) with no client secret:
 
-`{`  
-  `"mcpServers": {`  
-    `"powerbi-truefoundry": {`  
-      `"command": "npx",`  
-      `"args": [`  
-        `"-y",`  
-        `"mcp-remote",`  
-        `"https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted",`  
-        `"--static-oauth-client-info",`  
-        `"{\"client_id\":\"<PUBLIC_CLIENT_APP_ID>\",\"scope\":\"api://<TFY_GATEWAY_APP_ID>/access_as_user offline_access\"}"`  
-      `]`  
-    `}`  
-  `}`  
-`}`
+```
+{  
+  "mcpServers": {  
+    "powerbi-truefoundry": {  
+      "command": "npx",  
+      "args": [  
+        "-y",  
+        "mcp-remote",  
+        "https://ai-gateway.internal.yourcompany.com/mcp/powerbi-microsoft-hosted",  
+        "--static-oauth-client-info",  
+        "{\"client_id\":\"<PUBLIC_CLIENT_APP_ID>\",\"scope\":\"api://<TFY_GATEWAY_APP_ID>/access_as_user offline_access\"}"  
+      ]  
+    }  
+  }  
+}
+```
 
 ### **7.2 Method 2: Internal Enterprise Web UI on EKS (For Non-Technical Analysts)**
 
@@ -721,61 +734,63 @@ To proxy Microsoft’s hosted Power BI MCP endpoint (\[https\://api.fabric.micro
 
 Save the following manifest as powerbi-mcp-server.yaml and apply it via tfy apply \-f powerbi-mcp-server.yaml:
 
-`name: powerbi-microsoft-hosted`  
-`type: mcp-server-remote`  
-`description: "Microsoft Hosted Power BI Consumption MCP Server proxied via TrueFoundry OBO"`  
-`url: https://api.fabric.microsoft.com/v1/mcp/powerbi`
+```
+name: powerbi-microsoft-hosted  
+type: mcp-server-remote  
+description: "Microsoft Hosted Power BI Consumption MCP Server proxied via TrueFoundry OBO"  
+url: https://api.fabric.microsoft.com/v1/mcp/powerbi
 
-`# 1. Entra ID JWT-Bearer On-Behalf-Of (OBO) Authentication`  
-`auth_data:`  
-  `type: oauth2`  
-  `provider: microsoft_entra`  
-  `grant_type: jwt_bearer`  
-  `token_url: https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token`  
-  `client_id: <TFY_GATEWAY_APP_ID>`  
-  `# Reference your rotated Entra Client Secret (or certificate assertion if supported) in AWS Secrets Manager`  
-  `client_secret: tfy-secret://your-org:aws-secrets-store:entra-obo-client-secret`  
-  `scopes:`  
-    `- https://analysis.windows.net/powerbi/api/.default`
+# 1. Entra ID JWT-Bearer On-Behalf-Of (OBO) Authentication  
+auth_data:  
+  type: oauth2  
+  provider: microsoft_entra  
+  grant_type: jwt_bearer  
+  token_url: https://login.microsoftonline.com/<TENANT_ID>/oauth2/v2.0/token  
+  client_id: <TFY_GATEWAY_APP_ID>  
+  # Reference your rotated Entra Client Secret (or certificate assertion if supported) in AWS Secrets Manager  
+  client_secret: tfy-secret://your-org:aws-secrets-store:entra-obo-client-secret  
+  scopes:  
+    - https://analysis.windows.net/powerbi/api/.default
 
-`# 2. Strict Tool Allowlist Policy (Blocks 'Generate Query' so zero prompts go to Azure Copilot)`  
-`tool_policy:`  
-  `enable_tools_by_default: false`  
-  `enabled_tools:`  
-    `- "Get Semantic Model Schema"`  
-    `- "Get Report Metadata"`  
-    `- "Execute Query"`
+# 2. Strict Tool Allowlist Policy (Blocks 'Generate Query' so zero prompts go to Azure Copilot)  
+tool_policy:  
+  enable_tools_by_default: false  
+  enabled_tools:  
+    - "Get Semantic Model Schema"  
+    - "Get Report Metadata"  
+    - "Execute Query"
 
-`# 3. Tool Metadata & Guardrail Overrides (Injects TOPN limits into Bedrock Claude's tool definition)`  
-`# Note: Pair this soft prompt instruction with hard response size truncation and per-user rate limits`  
-`# in TrueFoundry AI Gateway Policies to prevent ungrouped DAX queries from exhausting Bedrock context.`  
-`tool_metadata:`  
-  `"Get Semantic Model Schema":`  
-    `description: "Fetch tables, columns, measures, and relationships for a Power BI semantic model. Always call this before writing a DAX query."`  
-    `annotations:`  
-      `readOnlyHint: true`  
-      `destructiveHint: false`  
-  `"Get Report Metadata":`  
-    `description: "Fetch pages, visuals, and field bindings for a Power BI report to understand how metrics are displayed."`  
-    `annotations:`  
-      `readOnlyHint: true`  
-      `destructiveHint: false`  
-  `"Execute Query":`  
-    `description: >`  
-      `Execute a read-only DAX query against a Power BI semantic model.`  
-      `CRITICAL GUARDRAIL: Never execute an ungrouped EVALUATE on a raw table.`  
-      `Always aggregate using SUMMARIZECOLUMNS/ROW or cap results using TOPN(200, ...)`  
-      `to avoid exceeding context window limits.`  
-    `annotations:`  
-      `readOnlyHint: true`  
-      `destructiveHint: false`
+# 3. Tool Metadata & Guardrail Overrides (Injects TOPN limits into Bedrock Claude's tool definition)  
+# Note: Pair this soft prompt instruction with hard response size truncation and per-user rate limits  
+# in TrueFoundry AI Gateway Policies to prevent ungrouped DAX queries from exhausting Bedrock context.  
+tool_metadata:  
+  "Get Semantic Model Schema":  
+    description: "Fetch tables, columns, measures, and relationships for a Power BI semantic model. Always call this before writing a DAX query."  
+    annotations:  
+      readOnlyHint: true  
+      destructiveHint: false  
+  "Get Report Metadata":  
+    description: "Fetch pages, visuals, and field bindings for a Power BI report to understand how metrics are displayed."  
+    annotations:  
+      readOnlyHint: true  
+      destructiveHint: false  
+  "Execute Query":  
+    description: >  
+      Execute a read-only DAX query against a Power BI semantic model.  
+      CRITICAL GUARDRAIL: Never execute an ungrouped EVALUATE on a raw table.  
+      Always aggregate using SUMMARIZECOLUMNS/ROW or cap results using TOPN(200, ...)  
+      to avoid exceeding context window limits.  
+    annotations:  
+      readOnlyHint: true  
+      destructiveHint: false
 
-`# 4. RBAC Access Control`  
-`collaborators:`  
-  `- subject: team:bi-analysts`  
-    `role: mcp-user`  
-  `- subject: team:platform-admins`  
-    `role: mcp-admin`
+# 4. RBAC Access Control  
+collaborators:  
+  - subject: team:bi-analysts  
+    role: mcp-user  
+  - subject: team:platform-admins  
+    role: mcp-admin
+```
 
 *(Note: After connecting the server in the TrueFoundry UI and clicking **Sync / Test Connection**, inspect the **Tools** tab to verify exact casing/spacing of tool names returned by your endpoint version and match enabled\_tools accordingly)*.
 
