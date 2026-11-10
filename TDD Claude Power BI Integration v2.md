@@ -126,9 +126,10 @@ To connect TrueFoundry’s AI Gateway on Amazon EKS to Amazon Bedrock over AWS P
     }  
   ]  
 }
+```
 
 **IRSA Trust Policy (truefoundry-irsa-trust-policy.json):**
-
+```
 {  
   "Version": "2012-10-17",  
   "Statement": [  
@@ -147,11 +148,11 @@ To connect TrueFoundry’s AI Gateway on Amazon EKS to Amazon Bedrock over AWS P
     }  
   ]  
 }
-
+```
 ### **5.1 Terraform Blueprint Snippets**
 
 #### **variables.tf**
-
+```
 variable "aws_region" {  
   description = "Primary AWS region where EKS and TrueFoundry are deployed"  
   type        = string  
@@ -190,9 +191,10 @@ variable "guardrail_kms_key_arns" {
   type        = list(string)  
   default     = []  
 }
+```
 
 #### **main.tf**
-
+```
 terraform {  
   required_version = ">= 1.5.0"  
   required_providers {  
